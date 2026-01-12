@@ -1,108 +1,132 @@
 import { NextAuthOptions } from "next-auth"
-import  CredentialsProvider  from "next-auth/providers/credentials"
+import CredentialsProvider from "next-auth/providers/credentials"
+import GoogleProvider from "next-auth/providers/google"
+import FacebookProvider from "next-auth/providers/facebook"
+import GitHubProvider from "next-auth/providers/github"
 import connectDb from "./db"
 import User from "@/model/user.model"
 import bcrypt from "bcryptjs"
-import Google from "next-auth/providers/google"
 
-
-
-
-const authOptions:NextAuthOptions={  
-    providers:[
-
- CredentialsProvider({
-    name:"Credentials",
-    credentials:{
-        email:{label:'Email',type:'text'},
-        password:{label:'Password',type:'password'}
-    },
-   async authorize(credentials, req) {
-       const email=credentials?.email
-       const password=credentials?.password
-        if(!email || !password){
-            throw new Error("email or password is not found")
-        }
-        await connectDb()
-        const user=await User.findOne({email})
-        if(!user){
-            throw new Error("user not found")
-        }
-       const isMatch=await bcrypt.compare(password,user.password)
-        if(!isMatch){
-        throw new Error("incorrect Password")
-        }
-
-        return {
-            id:user._id,
-            name:user.name,
-            email:user.email,
-            image:user.image
-        }
-
-    },
- }),
-
- Google({
-    clientId:process.env.GOOGLE_CLIENT_ID!,
-    clientSecret:process.env.GOOGLE_CLIENT_SECRET!
- })
-
-
-
-    ],
-    callbacks:{
-        
-        async signIn({account,user}) {
-            if(account?.provider=="google"){
+const authOptions: NextAuthOptions = {  
+    providers: [
+        CredentialsProvider({
+            name: "Credentials",
+            credentials: {
+                email: { label: 'Email', type: 'text' },
+                password: { label: 'Password', type: 'password' }
+            },
+            async authorize(credentials, req) {
+                const email = credentials?.email
+                const password = credentials?.password
+                
+                if (!email || !password) {
+                    throw new Error("Email or password is not found")
+                }
+                
                 await connectDb()
-                let existUser=await User.findOne({email:user?.email})
-                if(!existUser){
-                     existUser=await User.create({
-                        name:user.name,
-                        email:user?.email
+                const user = await User.findOne({ email })
+                
+                if (!user) {
+                    throw new Error("User not found")
+                }
+                
+                const isMatch = await bcrypt.compare(password, user.password)
+                if (!isMatch) {
+                    throw new Error("Incorrect password")
+                }
+
+                return {
+                    id: user._id.toString(),
+                    name: user.name,
+                    email: user.email,
+                    image: user.image
+                }
+            },
+        }),
+
+        GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!
+        }),
+
+        FacebookProvider({
+            clientId: process.env.FACEBOOK_CLIENT_ID!,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET!
+        }),
+
+        GitHubProvider({
+            clientId: process.env.GITHUB_CLIENT_ID!,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!
+        })
+    ],
+
+    callbacks: {
+        async signIn({ account, user }) {
+            if (account?.provider !== "credentials") {
+                await connectDb()
+                
+                // Get a fallback name from email if no name provided
+                if (!user.name && user.email) {
+                    user.name = user.email.split('@')[0];
+                }
+                
+                // Check if user exists
+                let existingUser = await User.findOne({ email: user.email })
+                
+                if (!existingUser) {
+                    // Create new user for social login
+                    existingUser = await User.create({
+                        name: user.name,
+                        email: user.email,
+                        image: user.image,
+                        provider: account?.provider
                     })
                 }
-           user.id=existUser._id as string
-              
+                
+                user.id = existingUser._id.toString()
             }
             return true
         },
-       
-        async jwt({token,user}) {
-            if(user){
-            token.id=user.id
-            token.name=user.name
-            token.email=user.email
-            token.image=user.image
+
+        async jwt({ token, user }) {
+            if (user) {
+                token.id = user.id
+                token.name = user.name
+                token.email = user.email
+                token.image = user.image
             }
             return token
         },
+        async redirect({ url, baseUrl }) {
+      
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
+    },
 
-
-        session({session,token}){
-            if(session.user){
-                session.user.id=token.id as string
-                session.user.name=token.name
-                session.user.email=token.email
-                session.user.image=token.image as string
+        session({ session, token }) {
+            if (session.user) {
+                session.user.id = token.id as string
+                session.user.name = token.name
+                session.user.email = token.email
+                session.user.image = token.image as string
             }
             return session
         }
-
-
-
     },
-    session:{
-     strategy:'jwt',
-     maxAge:30*24*60*60*1000
-    },
-    pages:{
-     signIn:'/login',
-     error:'/login'
 
+    session: {
+        strategy: 'jwt',
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     },
-    secret:process.env.NEXT_AUTH_SECRET
+
+    pages: {
+        signIn: '/login',
+        error: '/login'
+    },
+
+    secret: process.env.NEXTAUTH_SECRET
 }
-export default authOptions
 
+export default authOptions

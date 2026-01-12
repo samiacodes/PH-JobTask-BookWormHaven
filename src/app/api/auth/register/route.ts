@@ -1,45 +1,67 @@
-import connectDb from "@/lib/db";
-import User from "@/model/user.model";
-import bcrypt from "bcryptjs";
-import { NextRequest, NextResponse } from "next/server";
 
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import connectDb from '@/lib/db';
+import User from '@/model/user.model';
 
-
-
-export async function POST(request:NextRequest) {
+export async function POST(request: NextRequest) {
     try {
-        const {name,email,password}=await request.json()
-        await connectDb()
-        const existUser=await User.findOne({email})
-        if(existUser){
+        const { name, email, password } = await request.json();
+
+        // Validate input
+        if (!name || !email || !password) {
             return NextResponse.json(
-                {message:"user already exist!"},
-                {status:400}
-            )
+                { message: 'All fields are required' },
+                { status: 400 }
+            );
         }
 
-        if(password.length<6){
-              return NextResponse.json(
-                {message:"password must be at least 6 characters!"},
-                {status:400}
-            )
+        if (password.length < 6) {
+            return NextResponse.json(
+                { message: 'Password must be at least 6 characters long' },
+                { status: 400 }
+            );
         }
 
-       const hashedPassword= await bcrypt.hash(password,10)
-       const user=await User.create({
-        name,email,password:hashedPassword
-       })
+        await connectDb();
 
-           return NextResponse.json(
-                user,
-                {status:201}
-            )
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return NextResponse.json(
+                { message: 'User already exists with this email' },
+                { status: 409 }
+            );
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create user
+        const user = await User.create({
+            name,
+            email,
+            password: hashedPassword,
+            provider: 'credentials'
+        });
+
+        return NextResponse.json(
+            { 
+                message: 'User created successfully',
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email
+                }
+            },
+            { status: 201 }
+        );
 
     } catch (error) {
-            return NextResponse.json(
-                {message:`register error ${error}`},
-                {status:500}
-            )
+        console.error('Registration error:', error);
+        return NextResponse.json(
+            { message: 'Internal server error' },
+            { status: 500 }
+        );
     }
 }
-
