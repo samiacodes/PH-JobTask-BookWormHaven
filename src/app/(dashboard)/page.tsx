@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Star, BookOpen, TrendingUp, Users, Clock, Search, Filter, Sparkles, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 
 // Sample book data matching your dark theme
 const featuredBooks = [
@@ -68,7 +69,7 @@ export default function DashboardPage() {
               <Sparkles className="w-4 h-4 text-purple-400" />
               <span className="text-sm">Welcome to Your Library</span>
             </div>
-            
+            {/* <Image src="/banner1.png" height={500} width={500} alt="" /> */}
             <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
               Your Digital <span className="bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">Library</span> Awaits
             </h1>

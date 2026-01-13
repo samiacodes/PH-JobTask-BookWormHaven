@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, Heart } from 'lucide-react';
+import { BookOpen, Star } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -37,7 +37,7 @@ export default function Footer() {
 
           {/* Copyright */}
           <div className="text-sm text-gray-500 flex items-center gap-1">
-            Made with <Heart className="w-3 h-3 text-red-400" /> • © 2024 BookWorm
+            Made with <Star className="w-3 h-3 text-red-400" /> • © 2026 BookWorm
           </div>
         </div>
       </div>

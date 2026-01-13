@@ -15,7 +15,7 @@ const authOptions: NextAuthOptions = {
                 email: { label: 'Email', type: 'text' },
                 password: { label: 'Password', type: 'password' }
             },
-            async authorize(credentials, req) {
+            async authorize(credentials) {
                 const email = credentials?.email
                 const password = credentials?.password
                 
@@ -39,7 +39,8 @@ const authOptions: NextAuthOptions = {
                     id: user._id.toString(),
                     name: user.name,
                     email: user.email,
-                    image: user.image
+                    image: user.image,
+                    role: user.role // Added role
                 }
             },
         }),
@@ -65,45 +66,50 @@ const authOptions: NextAuthOptions = {
             if (account?.provider !== "credentials") {
                 await connectDb()
                 
-                // Get a fallback name from email if no name provided
+                // Ensure user has a name for OAuth providers
                 if (!user.name && user.email) {
-                    user.name = user.email.split('@')[0];
+                    user.name = user.email.split('@')[0]
                 }
                 
                 // Check if user exists
                 let existingUser = await User.findOne({ email: user.email })
                 
                 if (!existingUser) {
-                    // Create new user for social login
+                    // Create new user for OAuth providers
                     existingUser = await User.create({
                         name: user.name,
                         email: user.email,
                         image: user.image,
-                        provider: account?.provider
+                        provider: account?.provider,
+                        role: 'user' // Default role for new users
                     })
                 }
                 
+                // Add user ID and role to user object
                 user.id = existingUser._id.toString()
+                user.role = existingUser.role // Add role to user object
             }
             return true
         },
 
         async jwt({ token, user }) {
+            // Initial sign in
             if (user) {
                 token.id = user.id
                 token.name = user.name
                 token.email = user.email
                 token.image = user.image
+                token.role = user.role // Add role to token
             }
             return token
         },
+
         async redirect({ url, baseUrl }) {
-      
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
-    },
+            if (url.startsWith("/")) return `${baseUrl}${url}`
+            // Allows callback URLs on the same origin
+            else if (new URL(url).origin === baseUrl) return url
+            return baseUrl
+        },
 
         session({ session, token }) {
             if (session.user) {
@@ -111,6 +117,7 @@ const authOptions: NextAuthOptions = {
                 session.user.name = token.name
                 session.user.email = token.email
                 session.user.image = token.image as string
+                session.user.role = token.role as string // Add role to session
             }
             return session
         }

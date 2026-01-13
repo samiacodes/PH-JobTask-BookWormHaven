@@ -48,6 +48,15 @@ export default function Navbar() {
               <Library className="w-4 h-4" />
               Library
             </Link>
+            {session?.user?.role === 'admin' && (
+              <Link 
+                href="/add-book" 
+                className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                Add Book
+              </Link>
+            )}
             <Link 
               href="/recommendations" 
               className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
@@ -71,6 +80,15 @@ export default function Navbar() {
               <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
             ) : session ? (
               <div className="flex items-center gap-3">
+                {/* Admin link for admin users */}
+                {session.user?.role === 'admin' && (
+                  <Link 
+                    href="/admin"
+                    className="px-4 py-2 rounded-full border border-white/10 hover:border-white/20 transition-colors"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <Link 
                   href="/library"
                   className="px-4 py-2 rounded-full border border-white/10 hover:border-white/20 transition-colors"
@@ -111,6 +129,15 @@ export default function Navbar() {
                     >
                       Settings
                     </Link>
+                    {session.user?.role === 'admin' && (
+                      <Link 
+                        href="/admin" 
+                        className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Admin Panel
+                      </Link>
+                    )}
                     <button
                       onClick={() => signOut({ callbackUrl: '/' })}
                       className="flex items-center gap-2 w-full px-4 py-2 text-red-400 hover:text-red-300 hover:bg-white/5"
@@ -176,6 +203,16 @@ export default function Navbar() {
                 <Library className="w-4 h-4" />
                 Library
               </Link>
+              {session?.user?.role === 'admin' && (
+                <Link 
+                  href="/add-book" 
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Add Book
+                </Link>
+              )}
               
               <div className="pt-4 border-t border-white/10">
                 {session ? (
