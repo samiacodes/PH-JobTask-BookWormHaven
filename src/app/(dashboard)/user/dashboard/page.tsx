@@ -29,7 +29,8 @@ export default function UserDashboardPage() {
       booksThisYear: 0
     },
     recentBooks: [] as Book[],
-    recommendations: [] as Book[]
+    recommendations: [] as Book[],
+    recommendationExplanation: ''
   });
   const [loading, setLoading] = useState(true);
 
@@ -60,7 +61,8 @@ export default function UserDashboardPage() {
       setDashboardData({
         stats: data.data.stats,
         recentBooks: data.data.recentBooks,
-        recommendations: data.data.recommendations
+        recommendations: data.data.recommendations,
+        recommendationExplanation: data.data.explanation || ''
       });
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -78,7 +80,8 @@ export default function UserDashboardPage() {
           booksThisYear: 0
         },
         recentBooks: [],
-        recommendations: []
+        recommendations: [],
+        recommendationExplanation: ''
       });
     } finally {
       setLoading(false);
@@ -219,10 +222,17 @@ export default function UserDashboardPage() {
 
             {/* Recommendations */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Recommended for You
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Recommended for You
+                </h2>
+                {dashboardData.recommendationExplanation && (
+                  <div className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full">
+                    {dashboardData.recommendationExplanation}
+                  </div>
+                )}
+              </div>
               <div className="space-y-4">
                 {(dashboardData.recommendations || []).map((book, index) => {
                   // Generate a safe key using the book ID or a fallback
