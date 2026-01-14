@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Github, Facebook, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-function Login() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -16,7 +17,6 @@ function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-
 
   useEffect(() => {
     if (session) {
@@ -242,4 +242,11 @@ function Login() {
   );
 }
 
-export default Login;
+// Wrapper component to handle Suspense
+export default function Login() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]"><div className="text-white">Loading...</div></div>}>
+      <LoginForm />
+    </React.Suspense>
+  );
+}

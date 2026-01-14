@@ -5,12 +5,13 @@ import Review from '@/model/review.model';
 // GET single review
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDb();
+    const { id } = await params;
 
-    const review = await Review.findById(params.id)
+    const review = await Review.findById(id)
       .populate({
         path: 'book',
         select: 'title author coverImage'
@@ -52,7 +53,7 @@ export async function GET(
 // PATCH - Update review status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDb();
@@ -69,8 +70,9 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
     const review = await Review.findByIdAndUpdate(
-      params.id,
+      id,
       { status },
       { new: true }
     )
@@ -116,7 +118,7 @@ export async function PATCH(
 // PUT - Update full review
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDb();
@@ -154,8 +156,9 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const review = await Review.findByIdAndUpdate(
-      params.id,
+      id,
       { 
         text: text.trim(),
         rating: Math.round(rating), // Ensure integer rating
@@ -205,12 +208,13 @@ export async function PUT(
 // DELETE - Remove review
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDb();
 
-    const review = await Review.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const review = await Review.findByIdAndDelete(id);
 
     if (!review) {
       return NextResponse.json(
