@@ -16,32 +16,43 @@ const authOptions: NextAuthOptions = {
                 password: { label: 'Password', type: 'password' }
             },
             async authorize(credentials) {
-                const email = credentials?.email
-                const password = credentials?.password
+                console.log("Login attempt for:", credentials?.email);
+                
+                const email = credentials?.email;
+                const password = credentials?.password;
                 
                 if (!email || !password) {
-                    throw new Error("Email or password is not found")
+                    console.log("Missing email or password");
+                    throw new Error("Email or password is not found");
                 }
                 
-                await connectDb()
-                const user = await User.findOne({ email })
+                await connectDb();
+                
+                const user = await User.findOne({ email });
+                console.log("User found:", !!user);
                 
                 if (!user) {
-                    throw new Error("User not found")
+                    console.log("No user found with email:", email);
+                    throw new Error("User not found");
                 }
                 
-                const isMatch = await bcrypt.compare(password, user.password)
+                console.log("Comparing password for user:", user.name);
+                const isMatch = await bcrypt.compare(password, user.password);
+                console.log("Password match result:", isMatch);
+                
                 if (!isMatch) {
-                    throw new Error("Incorrect password")
+                    console.log("Password incorrect for user:", email);
+                    throw new Error("Incorrect password");
                 }
 
+                console.log("Authorization successful for user:", user.name);
                 return {
                     id: user._id.toString(),
                     name: user.name,
                     email: user.email,
                     image: user.image,
-                    role: user.role // Added role
-                }
+                    role: user.role || 'user' // Added role with fallback
+                };
             },
         }),
 
@@ -105,10 +116,13 @@ const authOptions: NextAuthOptions = {
         },
 
         async redirect({ url, baseUrl }) {
-            if (url.startsWith("/")) return `${baseUrl}${url}`
-            // Allows callback URLs on the same origin
-            else if (new URL(url).origin === baseUrl) return url
-            return baseUrl
+            // Allow default redirect or redirects to admin/user sections
+            if (url.startsWith('/admin') || url.startsWith('/user')) {
+                return `${baseUrl}${url}`
+            }
+            // Default redirect after login based on role
+            // This will be handled by the login page
+            return `${baseUrl}/`
         },
 
         session({ session, token }) {

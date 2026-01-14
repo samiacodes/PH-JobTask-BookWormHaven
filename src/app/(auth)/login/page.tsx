@@ -51,7 +51,15 @@ function Login() {
           setError("Login failed. Please check your credentials.");
         }
       } else {
-        router.push(callbackUrl);
+        // Get session to determine user role for redirect
+        const sessionRes = await fetch('/api/auth/session');
+        const sessionData = await sessionRes.json();
+        
+        if (sessionData?.user?.role === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/user/library');
+        }
         router.refresh();
       }
     } catch (error) {

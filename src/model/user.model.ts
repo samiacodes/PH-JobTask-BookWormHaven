@@ -12,6 +12,19 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   role: 'user' | 'admin';
   isActive: boolean;
+  shelves?: {
+    wantToRead: mongoose.Types.ObjectId[];
+    currentlyReading: mongoose.Types.ObjectId[];
+    read: mongoose.Types.ObjectId[];
+  };
+  readingProgress?: {
+    [bookId: string]: {
+      pagesRead: number;
+      totalPages: number;
+      percentage: number;
+      lastUpdated: Date;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +57,20 @@ const UserSchema: Schema = new Schema({
   isActive: { 
     type: Boolean, 
     default: true 
+  },
+  shelves: {
+    wantToRead: [{ type: Schema.Types.ObjectId, ref: 'Book' }],
+    currentlyReading: [{ type: Schema.Types.ObjectId, ref: 'Book' }],
+    read: [{ type: Schema.Types.ObjectId, ref: 'Book' }]
+  },
+  readingProgress: {
+    type: Map,
+    of: {
+      pagesRead: Number,
+      totalPages: Number,
+      percentage: Number,
+      lastUpdated: Date
+    }
   }
 }, {
   timestamps: true

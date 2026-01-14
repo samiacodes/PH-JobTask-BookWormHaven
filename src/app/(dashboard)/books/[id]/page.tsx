@@ -34,7 +34,7 @@ export default function BookDetailsPage() {
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [libraryStatus, setLibraryStatus] = useState<'want_to_read' | 'currently_reading' | 'read' | null>(null);
+  const [libraryStatus, setLibraryStatus] = useState<'wantToRead' | 'currentlyReading' | 'read' | null>(null);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -53,9 +53,21 @@ export default function BookDetailsPage() {
         setBook(data.book || data); // Handle both formats
         
         // Check user's library status for this book
-        // In a real app, you'd fetch this from the backend
-        // For now, we'll simulate it
-        setLibraryStatus(null);
+        if (session) {
+          const libraryResponse = await fetch(`/api/user/library`);
+          if (libraryResponse.ok) {
+            const libraryData = await libraryResponse.json();
+            
+            // Check which shelf contains this book
+            if (libraryData.shelves.wantToRead.some((b: any) => b._id === id)) {
+              setLibraryStatus('wantToRead');
+            } else if (libraryData.shelves.currentlyReading.some((b: any) => b._id === id)) {
+              setLibraryStatus('currentlyReading');
+            } else if (libraryData.shelves.read.some((b: any) => b._id === id)) {
+              setLibraryStatus('read');
+            }
+          }
+        }
       } catch (err: any) {
         console.error('Error fetching book:', err);
         setError(err.message || 'An error occurred while loading the book');
@@ -67,7 +79,7 @@ export default function BookDetailsPage() {
     if (id) {
       fetchBook();
     }
-  }, [id]);
+  }, [id, session]);
 
   const renderStars = (rating: number) => {
     return [...Array(5)].map((_, i) => (
@@ -76,6 +88,61 @@ export default function BookDetailsPage() {
         className={`w-5 h-5 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} 
       />
     ));
+  };
+
+  const handleShelfAction = async (shelfType: 'wantToRead' | 'currentlyReading' | 'read') => {
+    if (!session) {
+      alert('Please login to add books to your library');
+      return;
+    }
+    
+    if (!book) return;
+    
+    try {
+      // Determine the action based on current status
+      if (libraryStatus === shelfType) {
+        // Remove from this shelf
+        const response = await fetch('/api/user/shelf', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            bookId: book._id,
+            shelfType
+          }),
+        });
+        
+        if (response.ok) {
+          setLibraryStatus(null);
+          alert('Removed from shelf');
+        } else {
+          alert('Failed to remove from shelf');
+        }
+      } else {
+        // Add to the new shelf
+        const response = await fetch('/api/user/shelf', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            bookId: book._id,
+            shelfType
+          }),
+        });
+        
+        if (response.ok) {
+          setLibraryStatus(shelfType);
+          alert('Added to shelf');
+        } else {
+          alert('Failed to add to shelf');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating shelf:', error);
+      alert('An error occurred while updating your library');
+    }
   };
 
   if (loading) {
@@ -142,9 +209,23 @@ export default function BookDetailsPage() {
             
             {/* Book Info */}
             <div className="md:w-2/3">
-              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                {book.title}
-              </h1>
+              <div className="flex justify-between items-start">
+                <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                  {book.title}
+                </h1>
+                <button 
+                  onClick={() => {
+                    if (window.history.length > 1) {
+                      window.history.back();
+                    } else {
+                      window.location.href = '/user/browse';
+                    }
+                  }} 
+                  className="text-sm bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-lg transition-colors"
+                >
+                  Back
+                </button>
+              </div>
               
               <p className="text-2xl text-gray-300 mb-6">by {book.author}</p>
               
@@ -183,31 +264,31 @@ export default function BookDetailsPage() {
               {/* Action Buttons */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                 <button 
-                  onClick={() => setLibraryStatus('want_to_read')}
+                  onClick={() => handleShelfAction('wantToRead')}
                   className={`flex items-center justify-center gap-2 px-6 py-3 rounded-full border transition-all ${
-                    libraryStatus === 'want_to_read'
+                    libraryStatus === 'wantToRead'
                       ? 'border-purple-500 bg-purple-500/20 text-purple-300'
                       : 'border-white/10 hover:border-white/20'
                   }`}
                 >
                   <Bookmark className="w-5 h-5" />
-                  Want to Read
+                  {libraryStatus === 'wantToRead' ? 'In Want to Read' : 'Want to Read'}
                 </button>
                 
                 <button 
-                  onClick={() => setLibraryStatus('currently_reading')}
+                  onClick={() => handleShelfAction('currentlyReading')}
                   className={`flex items-center justify-center gap-2 px-6 py-3 rounded-full border transition-all ${
-                    libraryStatus === 'currently_reading'
+                    libraryStatus === 'currentlyReading'
                       ? 'border-blue-500 bg-blue-500/20 text-blue-300'
                       : 'border-white/10 hover:border-white/20'
                   }`}
                 >
                   <Eye className="w-5 h-5" />
-                  Currently Reading
+                  {libraryStatus === 'currentlyReading' ? 'Currently Reading' : 'Currently Reading'}
                 </button>
                 
                 <button 
-                  onClick={() => setLibraryStatus('read')}
+                  onClick={() => handleShelfAction('read')}
                   className={`flex items-center justify-center gap-2 px-6 py-3 rounded-full border transition-all ${
                     libraryStatus === 'read'
                       ? 'border-green-500 bg-green-500/20 text-green-300'
@@ -215,7 +296,7 @@ export default function BookDetailsPage() {
                   }`}
                 >
                   <Heart className="w-5 h-5" />
-                  Read
+                  {libraryStatus === 'read' ? 'Mark as Read' : 'Read'}
                 </button>
               </div>
               
