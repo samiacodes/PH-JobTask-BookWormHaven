@@ -40,19 +40,25 @@ export default function BookDetailsPage() {
     const fetchBook = async () => {
       try {
         setLoading(true);
+        console.log('Attempting to fetch book with ID:', id);
         const response = await fetch(`/api/books/${id}`);
+        console.log('API Response Status:', response.status);
         if (!response.ok) {
-          throw new Error('Failed to fetch book');
+          const errorData = await response.json();
+          console.error('API Error:', errorData);
+          throw new Error(errorData.message || 'Failed to fetch book');
         }
         const data = await response.json();
-        setBook(data);
+        console.log('API Response Data:', data);
+        setBook(data.book || data); // Handle both formats
         
         // Check user's library status for this book
         // In a real app, you'd fetch this from the backend
         // For now, we'll simulate it
         setLibraryStatus(null);
       } catch (err: any) {
-        setError(err.message || 'An error occurred');
+        console.error('Error fetching book:', err);
+        setError(err.message || 'An error occurred while loading the book');
       } finally {
         setLoading(false);
       }
@@ -145,10 +151,10 @@ export default function BookDetailsPage() {
               <div className="flex items-center gap-6 mb-6">
                 <div className="flex items-center gap-2">
                   <div className="flex">
-                    {renderStars(book.averageRating)}
+                    {renderStars(book?.averageRating || 0)}
                   </div>
-                  <span className="ml-2 text-gray-300">{book.averageRating.toFixed(1)}</span>
-                  <span className="text-gray-500">({book.totalReviews} reviews)</span>
+                  <span className="ml-2 text-gray-300">{(book?.averageRating || 0).toFixed(1)}</span>
+                  <span className="text-gray-500">({book?.totalReviews || 0} reviews)</span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-gray-400">

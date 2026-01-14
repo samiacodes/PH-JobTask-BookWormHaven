@@ -5,8 +5,9 @@ import Book from '@/model/book.model';
 import { getToken } from 'next-auth/jwt';
 
 // Handle PUT request to update review status
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await connectDb();
 
     // Get token to check if user is admin
@@ -30,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Find the review
-    const review = await Review.findById(params.id);
+    const review = await Review.findById(id);
     if (!review) {
       return NextResponse.json(
         { message: 'Review not found' },
@@ -73,8 +74,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Handle DELETE request to remove a review
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await connectDb();
 
     // Get token to check if user is admin
@@ -86,7 +88,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    const review = await Review.findByIdAndDelete(params.id);
+    const review = await Review.findByIdAndDelete(id);
 
     if (!review) {
       return NextResponse.json(

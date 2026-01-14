@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Upload } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import ImageUpload from '../../components/ImageUpload';
 
 export default function AddBookPage() {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ export default function AddBookPage() {
     isbn: '',
     coverImage: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const genres = [
     'Fiction', 'Non-Fiction', 'Sci-Fi', 'Fantasy', 
@@ -34,11 +36,55 @@ export default function AddBookPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = (url: string) => {
+    setFormData(prev => ({ ...prev, coverImage: url }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Adding book:', formData);
-    // Here you would typically send the data to your API
-    alert('Book added successfully!');
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/books', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          author: formData.author,
+          description: formData.description,
+          genre: formData.genre,
+          coverImage: formData.coverImage,
+          pages: parseInt(formData.pages),
+          publishedYear: parseInt(formData.publishedYear),
+          isbn: formData.isbn,
+        }),
+      });
+      
+      if (response.ok) {
+        alert('Book added successfully!');
+        // Reset form
+        setFormData({
+          title: '',
+          author: '',
+          description: '',
+          genre: [],
+          pages: '',
+          publishedYear: '',
+          isbn: '',
+          coverImage: '',
+        });
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Failed to add book');
+      }
+    } catch (error) {
+      console.error('Error adding book:', error);
+      alert('An error occurred while adding the book');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -112,16 +158,9 @@ export default function AddBookPage() {
               />
             </div>
             
-            <div>
-              <label className="block text-slate-300 mb-2">Cover Image URL</label>
-              <input
-                type="text"
-                name="coverImage"
-                value={formData.coverImage}
-                onChange={handleInputChange}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
-                placeholder="Image URL (optional)"
-              />
+            <div className="md:col-span-2">
+              <label className="block text-slate-300 mb-2">Cover Image</label>
+              <ImageUpload onUpload={handleImageUpload} currentImageUrl={formData.coverImage} />
             </div>
           </div>
           

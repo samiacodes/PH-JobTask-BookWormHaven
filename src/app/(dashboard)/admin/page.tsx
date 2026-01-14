@@ -1,22 +1,91 @@
 'use client';
 
-import { BarChart3, BookOpen, MessageSquare, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, BookOpen, MessageSquare, Users, Calendar, TrendingUp } from 'lucide-react';
 import StatsCard from './components/StatsCard';
-import ActivityTimeline from './components/ActivityTimeline';
+import DashboardCharts from './components/DashboardCharts';
+import LoadingSpinner from './components/LoadingSpinner';
+import RecentActivity from './components/RecentActivity';
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    totalBooks: 0,
+    pendingReviews: 0,
+    totalUsers: 0,
+    booksAddedToday: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+    
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/admin/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStats();
+  }, []);
+  
+  // Mock chart data - in a real app, this would come from the API
+  const booksPerGenre = [
+    { name: 'Fiction', value: 2500 },
+    { name: 'Non-Fiction', value: 1800 },
+    { name: 'Sci-Fi', value: 1200 },
+    { name: 'Mystery', value: 800 },
+    { name: 'Romance', value: 575 }
+  ];
+  
+  const monthlyBooks = [
+    { name: 'Jan', value: 120 },
+    { name: 'Feb', value: 195 },
+    { name: 'Mar', value: 150 },
+    { name: 'Apr', value: 220 },
+    { name: 'May', value: 180 },
+    { name: 'Jun', value: 250 },
+    { name: 'Jul', value: 210 },
+    { name: 'Aug', value: 280 },
+    { name: 'Sep', value: 240 },
+    { name: 'Oct', value: 310 },
+    { name: 'Nov', value: 275 },
+    { name: 'Dec', value: 320 }
+  ];
+  
+  const userGrowth = [
+    { name: 'Jan', value: 45 },
+    { name: 'Feb', value: 62 },
+    { name: 'Mar', value: 58 },
+    { name: 'Apr', value: 75 },
+    { name: 'May', value: 92 },
+    { name: 'Jun', value: 108 },
+    { name: 'Jul', value: 135 },
+    { name: 'Aug', value: 152 },
+    { name: 'Sep', value: 178 },
+    { name: 'Oct', value: 205 },
+    { name: 'Nov', value: 230 },
+    { name: 'Dec', value: 265 }
+  ];
+  
   const statsData = [
-    { title: 'Total Books', value: '6,875', icon: <BookOpen className="w-5 h-5" />, color: 'text-violet-500' },
-    { title: 'Books Read Today', value: '576', icon: <BarChart3 className="w-5 h-5" />, color: 'text-emerald-500' },
-    { title: 'Pending Reviews', value: '20', icon: <MessageSquare className="w-5 h-5" />, color: 'text-amber-500' },
-    { title: 'New Users', value: '250', icon: <Users className="w-5 h-5" />, color: 'text-blue-500' },
+    { title: 'Total Books', value: loading ? 'Loading...' : stats.totalBooks.toLocaleString(), icon: <BookOpen className="w-5 h-5" />, color: 'text-violet-500' },
+    { title: 'Books Read Today', value: loading ? 'Loading...' : stats.booksAddedToday.toLocaleString(), icon: <BarChart3 className="w-5 h-5" />, color: 'text-emerald-500' },
+    { title: 'Pending Reviews', value: loading ? 'Loading...' : stats.pendingReviews.toLocaleString(), icon: <MessageSquare className="w-5 h-5" />, color: 'text-amber-500' },
+    { title: 'Total Users', value: loading ? 'Loading...' : stats.totalUsers.toLocaleString(), icon: <Users className="w-5 h-5" />, color: 'text-blue-500' },
   ];
 
-  const recentActivities = [
-    { id: 1, text: "User 'John' added review for 'The Silent Patient'", time: '2 minutes ago', icon: <MessageSquare className="w-4 h-4" /> },
-    { id: 2, text: "Admin approved 5 book requests", time: '15 minutes ago', icon: <BookOpen className="w-4 h-4" /> },
-    { id: 3, text: "New genre 'Science Fiction' added", time: '1 hour ago', icon: <BookOpen className="w-4 h-4" /> },
-  ];
+  if (!isMounted) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="space-y-8">
@@ -53,100 +122,22 @@ export default function AdminDashboard() {
       </section>
 
       {/* SECTION 2: Charts & Reports */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Total Books Report</h3>
-          <div className="flex items-center justify-center h-64">
-            <div className="relative w-48 h-48 rounded-full border-8 border-violet-500 flex items-center justify-center">
-              <div className="absolute w-full h-full rounded-full border-8 border-emerald-500 border-t-transparent border-r-transparent" style={{ transform: 'rotate(45deg)' }}></div>
-              <div className="absolute w-full h-full rounded-full border-8 border-amber-500 border-t-transparent border-r-transparent border-b-transparent" style={{ transform: 'rotate(90deg)' }}></div>
-              <div className="absolute w-full h-full rounded-full border-8 border-blue-500 border-t-transparent border-r-transparent border-b-transparent border-l-transparent" style={{ transform: 'rotate(135deg)' }}></div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">6,875</div>
-                <div className="text-sm text-slate-400">Total Books</div>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-violet-500"></div>
-              <span className="text-sm">New Books: 44.4%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-              <span className="text-sm">Approved: 33.3%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-              <span className="text-sm">Pending: 11.1%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span className="text-sm">Rejected: 11.1%</span>
-            </div>
-          </div>
-        </div>
+      <DashboardCharts 
+        booksPerGenre={booksPerGenre}
+        monthlyBooks={monthlyBooks}
+        userGrowth={userGrowth}
+      />
 
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Weekly Activity</h3>
-          <div className="flex items-center justify-center h-64">
-            <div className="w-full h-full flex items-center justify-center text-slate-500">
-              Line Chart Placeholder
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 3: Recent Activity */}
+      {/* SECTION 3: Recent Activity - Would come from API in real implementation */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-          <div className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
-                <div className="mt-0.5 text-violet-500">
-                  {activity.icon}
-                </div>
-                <div>
-                  <p className="text-slate-300">{activity.text}</p>
-                  <p className="text-xs text-slate-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-lg font-semibold mb-4">Recent Books Added</h3>
+          <RecentActivity />
         </div>
 
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
           <h3 className="text-lg font-semibold mb-4">Recent Reviews</h3>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="mt-0.5 text-amber-500">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-slate-300">John reviewed 'Atomic Habits'</p>
-                <p className="text-xs text-slate-500">15 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="mt-0.5 text-amber-500">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-slate-300">Sarah rated 'The Silent Patient' 5 stars</p>
-                <p className="text-xs text-slate-500">45 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg">
-              <div className="mt-0.5 text-amber-500">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-slate-300">Mike added a comment to 'Project Hail Mary'</p>
-                <p className="text-xs text-slate-500">2 hours ago</p>
-              </div>
-            </div>
-          </div>
+          <RecentActivity />
         </div>
       </section>
 

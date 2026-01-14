@@ -1,41 +1,57 @@
-// /api/admin/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import connectDb from '@/lib/db';
-import User from '@/model/user.model';
-import Book from '@/model/book.model';
-import Review from '@/model/review.model';
 import { getToken } from 'next-auth/jwt';
+import connectDb from '@/lib/db';
+import Book from '@/model/book.model';
+import User from '@/model/user.model';
+import Review from '@/model/review.model';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDb();
-
-    // Get token to check if user is admin
+    // Verify admin authentication
     const token = await getToken({ req: request });
     if (!token || token.role !== 'admin') {
       return NextResponse.json(
-        { message: 'Unauthorized' },
+        { message: 'Unauthorized: Admin access required' },
         { status: 401 }
       );
     }
 
-    const [totalUsers, totalBooks, pendingReviews] = await Promise.all([
-      User.countDocuments(),
+    await connectDb();
+
+    // Get current date for "today" calculations
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Fetch all statistics
+    const [
+      totalBooks,
+      pendingReviews,
+      totalUsers,
+      booksAddedToday
+    ] = await Promise.all([
       Book.countDocuments(),
-      Review.countDocuments({ status: 'pending' })
+      Review.countDocuments({ status: 'pending' }),
+      User.countDocuments(),
+      Book.countDocuments({
+        createdAt: {
+          $gte: startOfDay,
+          $lt: endOfDay
+        }
+      })
     ]);
 
     return NextResponse.json({
-      totalUsers,
       totalBooks,
-      pendingBooks: 0, // No more pending books
-      pendingReviews
+      pendingReviews,
+      totalUsers,
+      booksAddedToday
     });
-
   } catch (error) {
     console.error('Error fetching admin stats:', error);
     return NextResponse.json(
-      { message: 'Failed to fetch stats' },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }

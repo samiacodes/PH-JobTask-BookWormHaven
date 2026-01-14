@@ -1,47 +1,113 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tag, Plus, Edit3, Trash2 } from 'lucide-react';
+import DataTable from '../components/DataTable';
 
 interface Genre {
-  id: string;
+  _id: string;
   name: string;
-  bookCount: number;
+  slug: string;
   createdAt: string;
 }
 
 export default function GenresManagement() {
-  const [genres, setGenres] = useState<Genre[]>([
-    { id: '1', name: 'Fiction', bookCount: 1200, createdAt: '2023-01-15' },
-    { id: '2', name: 'Non-Fiction', bookCount: 850, createdAt: '2023-01-16' },
-    { id: '3', name: 'Sci-Fi', bookCount: 650, createdAt: '2023-02-01' },
-    { id: '4', name: 'Fantasy', bookCount: 720, createdAt: '2023-02-10' },
-    { id: '5', name: 'Mystery', bookCount: 580, createdAt: '2023-03-05' },
-    { id: '6', name: 'Romance', bookCount: 920, createdAt: '2023-03-12' },
-    { id: '7', name: 'Biography', bookCount: 450, createdAt: '2023-04-01' },
-    { id: '8', name: 'Self-Help', bookCount: 630, createdAt: '2023-04-15' },
-  ]);
-
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalGenres, setTotalGenres] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newGenreName, setNewGenreName] = useState('');
 
-  const handleAddGenre = () => {
-    if (newGenreName.trim()) {
-      const newGenre: Genre = {
-        id: (genres.length + 1).toString(),
-        name: newGenreName.trim(),
-        bookCount: 0,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
-      setGenres([...genres, newGenre]);
-      setNewGenreName('');
-      setShowAddModal(false);
+  const fetchGenres = async (page: number = 1, search: string = '') => {
+    setLoading(true);
+    try {
+      let url = `/api/genres?page=${page}&limit=10`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setGenres(data.genres);
+        setCurrentPage(data.pagination.currentPage);
+        setTotalPages(data.pagination.totalPages);
+        setTotalGenres(data.pagination.totalGenres);
+      }
+    } catch (error) {
+      console.error('Error fetching genres:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    setGenres(genres.filter(genre => genre.id !== id));
+  useEffect(() => {
+    fetchGenres();
+  }, []);
+
+  const handlePageChange = (page: number) => {
+    fetchGenres(page);
   };
+
+  const handleSearch = (searchTerm: string) => {
+    fetchGenres(1, searchTerm);
+  };
+
+  const handleAddGenre = async () => {
+    if (newGenreName.trim()) {
+      try {
+        const response = await fetch('/api/genres', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: newGenreName.trim() }),
+        });
+        
+        if (response.ok) {
+          setNewGenreName('');
+          setShowAddModal(false);
+          // Refresh the list
+          fetchGenres(currentPage);
+        } else {
+          alert('Failed to add genre');
+        }
+      } catch (error) {
+        console.error('Error adding genre:', error);
+        alert('Error adding genre');
+      }
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this genre?')) {
+      try {
+        const response = await fetch(`/api/genres/${id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          // Refresh the list
+          fetchGenres(currentPage);
+        } else {
+          const data = await response.json();
+          alert(data.message || 'Failed to delete genre');
+        }
+      } catch (error) {
+        console.error('Error deleting genre:', error);
+        alert('Error deleting genre');
+      }
+    }
+  };
+
+  const columns = [
+    { key: 'name', label: 'Genre' },
+    { key: 'slug', label: 'Slug' },
+    { 
+      key: 'createdAt', 
+      label: 'Created Date',
+      render: (item: Genre) => new Date(item.createdAt).toLocaleDateString()
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -57,45 +123,35 @@ export default function GenresManagement() {
       </div>
 
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700 text-left text-slate-400">
-                <th className="pb-3 font-medium">Genre</th>
-                <th className="pb-3 font-medium">Book Count</th>
-                <th className="pb-3 font-medium">Created Date</th>
-                <th className="pb-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {genres.map((genre) => (
-                <tr key={genre.id} className="border-b border-slate-800 last:border-b-0 hover:bg-slate-700/30">
-                  <td className="py-4 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-violet-500" />
-                      {genre.name}
-                    </div>
-                  </td>
-                  <td className="py-4">{genre.bookCount}</td>
-                  <td className="py-4 text-slate-400">{genre.createdAt}</td>
-                  <td className="py-4">
-                    <div className="flex items-center gap-2">
-                      <button className="text-slate-400 hover:text-slate-200 p-1">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        className="text-slate-400 hover:text-red-400 p-1"
-                        onClick={() => handleDelete(genre.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="text-slate-400">Loading genres...</div>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={genres}
+            total={totalGenres}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onSearch={handleSearch}
+            searchPlaceholder="Search genres..."
+            actions={(item) => (
+              <div className="flex items-center gap-2">
+                <button className="text-slate-400 hover:text-slate-200 p-1">
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button 
+                  className="text-slate-400 hover:text-red-400 p-1"
+                  onClick={() => handleDelete(item._id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          />
+        )}
       </div>
 
       {showAddModal && (

@@ -4,10 +4,9 @@ export interface IReview extends Document {
   book: mongoose.Types.ObjectId;
   user: mongoose.Types.ObjectId;
   rating: number;
-  comment: string;
+  text: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: Date;
-  updatedAt: Date;
 }
 
 const ReviewSchema: Schema = new Schema({
@@ -23,11 +22,11 @@ const ReviewSchema: Schema = new Schema({
   },
   rating: { 
     type: Number, 
-    required: true, 
-    min: 1, 
-    max: 5 
+    required: true,
+    min: 1,
+    max: 5
   },
-  comment: { 
+  text: { 
     type: String, 
     required: true 
   },
@@ -35,6 +34,10 @@ const ReviewSchema: Schema = new Schema({
     type: String, 
     enum: ['pending', 'approved', 'rejected'], 
     default: 'pending' 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
   }
 }, {
   timestamps: true

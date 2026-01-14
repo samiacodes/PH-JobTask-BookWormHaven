@@ -1,11 +1,25 @@
-import { ReactNode } from 'react';
+'use client';
+
+import { ReactNode, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminSidebar from './components/AdminSidebar';
+import LoadingSpinner from './components/LoadingSpinner';
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-900 text-slate-50">
       {/* Fixed Sidebar - NEVER overlaps */}

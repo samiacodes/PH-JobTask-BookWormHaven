@@ -1,44 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import connectDb from '@/lib/db';
+import Genre from '@/model/genre.model';
 import Book from '@/model/book.model';
 import { Types } from 'mongoose';
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    await connectDb();
-
-    // Validate book ID
-    if (!id || !Types.ObjectId.isValid(id)) {
-      return NextResponse.json(
-        { message: 'Invalid book ID' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch book by ID
-    const book = await Book.findById(id).lean();
-
-    if (!book) {
-      return NextResponse.json(
-        { message: 'Book not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ book });
-  } catch (error) {
-    console.error('Error fetching book:', error);
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
 
 export async function PUT(
   request: NextRequest,
@@ -56,54 +21,62 @@ export async function PUT(
       );
     }
 
-    // Validate book ID
+    // Validate genre ID
     if (!id || !Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { message: 'Invalid book ID' },
+        { message: 'Invalid genre ID' },
         { status: 400 }
       );
     }
 
     const body = await request.json();
-    const { title, author, description, genre, coverImage, pages } = body;
+    const { name } = body;
 
     // Validate required fields
-    if (!title || !author || !description || !genre || !coverImage || !pages) {
+    if (!name) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { message: 'Genre name is required' },
         { status: 400 }
       );
     }
 
     await connectDb();
 
-    // Update book
-    const updatedBook = await Book.findByIdAndUpdate(
+    // Create slug from name
+    const slug = name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '-').replace(/--+/g, '-');
+
+    // Update genre
+    const updatedGenre = await Genre.findByIdAndUpdate(
       id,
       {
-        title,
-        author,
-        description,
-        genre: Array.isArray(genre) ? genre : [genre],
-        coverImage,
-        pages
+        name,
+        slug
       },
       { new: true } // Return updated document
     );
 
-    if (!updatedBook) {
+    if (!updatedGenre) {
       return NextResponse.json(
-        { message: 'Book not found' },
+        { message: 'Genre not found' },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
-      message: 'Book updated successfully',
-      book: updatedBook
+      message: 'Genre updated successfully',
+      genre: updatedGenre
     });
   } catch (error) {
-    console.error('Error updating book:', error);
+    console.error('Error updating genre:', error);
+    
+    // Handle duplicate name error
+    if ((error as any).code === 11000) {
+      return NextResponse.json(
+        { message: 'A genre with this name already exists' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
@@ -127,31 +100,41 @@ export async function DELETE(
       );
     }
 
-    // Validate book ID
+    // Validate genre ID
     if (!id || !Types.ObjectId.isValid(id)) {
       return NextResponse.json(
-        { message: 'Invalid book ID' },
+        { message: 'Invalid genre ID' },
         { status: 400 }
       );
     }
 
     await connectDb();
 
-    // Delete book
-    const deletedBook = await Book.findByIdAndDelete(id);
-
-    if (!deletedBook) {
+    // Check if any books are associated with this genre
+    const booksWithGenre = await Book.countDocuments({ genre: id });
+    
+    if (booksWithGenre > 0) {
       return NextResponse.json(
-        { message: 'Book not found' },
+        { message: 'Cannot delete genre: books are associated with this genre' },
+        { status: 400 }
+      );
+    }
+
+    // Delete genre
+    const deletedGenre = await Genre.findByIdAndDelete(id);
+
+    if (!deletedGenre) {
+      return NextResponse.json(
+        { message: 'Genre not found' },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
-      message: 'Book deleted successfully'
+      message: 'Genre deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting book:', error);
+    console.error('Error deleting genre:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

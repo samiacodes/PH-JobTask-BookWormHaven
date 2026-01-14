@@ -1,56 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import connectDb from '@/lib/db';
+import Genre from '@/model/genre.model';
 import Book from '@/model/book.model';
-import User from '@/model/user.model';
 
 export async function GET(request: NextRequest) {
   try {
+    await connectDb();
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const genre = searchParams.get('genre') || '';
-
-    await connectDb();
 
     // Build filter object
     const filter: any = {};
     if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { author: { $regex: search, $options: 'i' } }
+        { name: { $regex: search, $options: 'i' } },
+        { slug: { $regex: search, $options: 'i' } }
       ];
-    }
-    if (genre) {
-      filter.genre = { $in: [genre] }; // Assuming genre is stored as string array
     }
 
     // Calculate skip value for pagination
     const skip = (page - 1) * limit;
 
-    // Fetch books with filter, pagination and sorting
-    const books = await Book.find(filter)
+    // Fetch genres with filter, pagination and sorting
+    const genres = await Genre.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
     // Get total count for pagination
-    const totalCount = await Book.countDocuments(filter);
+    const totalCount = await Genre.countDocuments(filter);
 
     return NextResponse.json({
-      books,
+      genres,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalCount / limit),
-        totalBooks: totalCount,
+        totalGenres: totalCount,
         hasNextPage: page < Math.ceil(totalCount / limit),
         hasPrevPage: page > 1
       }
     });
   } catch (error) {
-    console.error('Error fetching books:', error);
+    console.error('Error fetching genres:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
@@ -70,37 +66,44 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, author, description, genre, coverImage, pages } = body;
+    const { name } = body;
 
     // Validate required fields
-    if (!title || !author || !description || !genre || !coverImage || !pages) {
+    if (!name) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { message: 'Genre name is required' },
         { status: 400 }
       );
     }
 
     await connectDb();
 
-    // Create new book
-    const newBook = new Book({
-      title,
-      author,
-      description,
-      genre: Array.isArray(genre) ? genre : [genre],
-      coverImage,
-      pages,
-      addedBy: token.sub // Use the user ID from token
+    // Create slug from name
+    const slug = name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '-').replace(/--+/g, '-');
+
+    // Create new genre
+    const newGenre = new Genre({
+      name,
+      slug
     });
 
-    await newBook.save();
+    await newGenre.save();
 
     return NextResponse.json(
-      { message: 'Book created successfully', book: newBook },
+      { message: 'Genre created successfully', genre: newGenre },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating book:', error);
+    console.error('Error creating genre:', error);
+    
+    // Handle duplicate name error
+    if ((error as any).code === 11000) {
+      return NextResponse.json(
+        { message: 'A genre with this name already exists' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

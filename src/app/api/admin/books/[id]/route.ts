@@ -5,8 +5,9 @@ import { getToken } from 'next-auth/jwt';
 import { Types } from 'mongoose';
 
 // Handle PUT request to update book details
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await connectDb();
 
     // Get token to check if user is admin
@@ -66,7 +67,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Find and update the book
     const book = await Book.findByIdAndUpdate(
-      params.id,
+      id,
       updateObj,
       { new: true, runValidators: true }
     );
@@ -98,8 +99,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Handle DELETE request to remove a book
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await connectDb();
 
     // Get token to check if user is admin
@@ -111,7 +113,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    const book = await Book.findByIdAndDelete(params.id);
+    const book = await Book.findByIdAndDelete(id);
 
     if (!book) {
       return NextResponse.json(

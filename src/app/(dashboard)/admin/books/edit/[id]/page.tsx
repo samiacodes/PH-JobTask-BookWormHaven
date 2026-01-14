@@ -1,25 +1,62 @@
 'use client';
 
-import { useState } from 'react';
-import { BookOpen, Upload } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { use } from 'react';
+import { BookOpen } from 'lucide-react';
+import ImageUpload from '../../../components/ImageUpload';
 
-export default function EditBookPage() {
+export default function EditBookPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [formData, setFormData] = useState({
-    title: 'The Silent Patient',
-    author: 'Alex Michaelides',
-    description: 'A psychological thriller about a woman who stops talking after shooting her husband.',
-    genre: ['Thriller'] as string[],
-    pages: '336',
-    publishedYear: '2019',
-    isbn: '978-1250301697',
+    title: '',
+    author: '',
+    description: '',
+    genre: [] as string[],
+    pages: '',
+    publishedYear: '',
+    isbn: '',
     coverImage: '',
-    isFeatured: true,
+    isFeatured: false,
   });
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const genres = [
     'Fiction', 'Non-Fiction', 'Sci-Fi', 'Fantasy', 
     'Mystery', 'Romance', 'Biography', 'Self-Help', 'Thriller'
   ];
+
+  // Fetch book data when component mounts
+  useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        const response = await fetch(`/api/books/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFormData({
+            title: data.book.title,
+            author: data.book.author,
+            description: data.book.description,
+            genre: Array.isArray(data.book.genre) ? data.book.genre : [data.book.genre],
+            pages: data.book.pages.toString(),
+            publishedYear: data.book.publishedYear?.toString() || '',
+            isbn: data.book.isbn || '',
+            coverImage: data.book.coverImage,
+            isFeatured: data.book.isFeatured || false,
+          });
+        } else {
+          alert('Failed to load book data');
+        }
+      } catch (error) {
+        console.error('Error fetching book:', error);
+        alert('Error loading book data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBook();
+  }, [id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -40,11 +77,67 @@ export default function EditBookPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = (url: string) => {
+    setFormData(prev => ({ ...prev, coverImage: url }));
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this book?')) {
+      try {
+        const response = await fetch(`/api/books/${id}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          alert('Book deleted successfully!');
+          // Redirect to books list page
+          window.location.href = '/admin/books';
+        } else {
+          const errorData = await response.json();
+          alert(errorData.message || 'Failed to delete book');
+        }
+      } catch (error) {
+        console.error('Error deleting book:', error);
+        alert('Error deleting book');
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Updating book:', formData);
-    // Here you would typically send the data to your API
-    alert('Book updated successfully!');
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`/api/books/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          author: formData.author,
+          description: formData.description,
+          genre: formData.genre,
+          coverImage: formData.coverImage,
+          pages: parseInt(formData.pages),
+          publishedYear: parseInt(formData.publishedYear),
+          isbn: formData.isbn,
+          isFeatured: formData.isFeatured,
+        }),
+      });
+      
+      if (response.ok) {
+        alert('Book updated successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Failed to update book');
+      }
+    } catch (error) {
+      console.error('Error updating book:', error);
+      alert('An error occurred while updating the book');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -118,16 +211,9 @@ export default function EditBookPage() {
               />
             </div>
             
-            <div>
-              <label className="block text-slate-300 mb-2">Cover Image URL</label>
-              <input
-                type="text"
-                name="coverImage"
-                value={formData.coverImage}
-                onChange={handleInputChange}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
-                placeholder="Image URL (optional)"
-              />
+            <div className="md:col-span-2">
+              <label className="block text-slate-300 mb-2">Cover Image</label>
+              <ImageUpload onUpload={handleImageUpload} currentImageUrl={formData.coverImage} />
             </div>
           </div>
           

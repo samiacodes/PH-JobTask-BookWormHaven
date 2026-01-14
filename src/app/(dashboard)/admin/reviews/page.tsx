@@ -1,47 +1,195 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Star, BookOpen, User, Edit3, Trash2, Search, Filter } from 'lucide-react';
+import DataTable from '../components/DataTable';
 
 interface Review {
-  id: string;
-  book: string;
-  user: string;
+  _id: string;
+  book: {
+    title: string;
+  };
+  user: {
+    name: string;
+    email: string;
+  };
   rating: number;
-  comment: string;
-  date: string;
+  text: string;
   status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 export default function ReviewsManagement() {
-  const [reviews, setReviews] = useState<Review[]>([
-    { id: '1', book: 'The Silent Patient', user: 'John Doe', rating: 5, comment: 'Amazing psychological thriller!', date: '2023-05-15', status: 'approved' },
-    { id: '2', book: 'Atomic Habits', user: 'Jane Smith', rating: 4, comment: 'Great insights on building good habits.', date: '2023-05-18', status: 'approved' },
-    { id: '3', book: 'Project Hail Mary', user: 'Bob Johnson', rating: 5, comment: 'Another masterpiece from Andy Weir!', date: '2023-05-20', status: 'pending' },
-    { id: '4', book: 'Klara and the Sun', user: 'Alice Williams', rating: 3, comment: 'Interesting concept but slow pace.', date: '2023-05-22', status: 'pending' },
-    { id: '5', book: 'The Midnight Library', user: 'Charlie Brown', rating: 4, comment: 'Thought-provoking story about life choices.', date: '2023-05-25', status: 'rejected' },
-  ]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalReviews, setTotalReviews] = useState(0);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
-
-  const filteredReviews = reviews.filter(review => {
-    const matchesSearch = review.book.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          review.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          review.comment.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === 'all' || review.status === filter;
-    return matchesSearch && matchesFilter;
-  });
-
-  const handleDelete = (id: string) => {
-    setReviews(reviews.filter(review => review.id !== id));
+  const fetchReviews = async (page: number = 1, search: string = '', status: string = '') => {
+    setLoading(true);
+    try {
+      let url = `/api/reviews?page=${page}&limit=10`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (status) url += `&status=${encodeURIComponent(status)}`;
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data.reviews);
+        setCurrentPage(data.pagination.currentPage);
+        setTotalPages(data.pagination.totalPages);
+        setTotalReviews(data.pagination.totalReviews);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleStatusChange = (id: string, newStatus: 'approved' | 'rejected' | 'pending') => {
-    setReviews(reviews.map(review => 
-      review.id === id ? { ...review, status: newStatus } : review
-    ));
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const handlePageChange = (page: number) => {
+    fetchReviews(page);
   };
+
+  const handleSearch = (searchTerm: string) => {
+    fetchReviews(1, searchTerm);
+  };
+
+  const handleFilter = (field: string, value: string) => {
+    fetchReviews(1, '', value);
+  };
+
+  const handleStatusChange = async (id: string, newStatus: 'approved' | 'rejected' | 'pending') => {
+    try {
+      const response = await fetch(`/api/reviews/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      if (response.ok) {
+        // Refresh the list
+        fetchReviews(currentPage);
+      } else {
+        alert(`Failed to update review status to ${newStatus}`);
+      }
+    } catch (error) {
+      console.error('Error updating review status:', error);
+      alert('Error updating review status');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this review?')) {
+      try {
+        const response = await fetch(`/api/reviews/${id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          // Refresh the list
+          fetchReviews(currentPage);
+        } else {
+          alert('Failed to delete review');
+        }
+      } catch (error) {
+        console.error('Error deleting review:', error);
+        alert('Error deleting review');
+      }
+    }
+  };
+
+  const columns = [
+    { 
+      key: 'book.title', 
+      label: 'Book',
+      render: (item: Review) => (
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-violet-500" />
+          {item.book.title}
+        </div>
+      )
+    },
+    { 
+      key: 'user.name', 
+      label: 'User',
+      render: (item: Review) => (
+        <div className="flex items-center gap-2">
+          <User className="w-4 h-4 text-slate-400" />
+          {item.user.name}
+        </div>
+      )
+    },
+    { 
+      key: 'rating', 
+      label: 'Rating',
+      render: (item: Review) => (
+        <div className="flex items-center gap-1">
+          {[...Array(5)].map((_, i) => (
+            <Star 
+              key={i} 
+              className={`w-4 h-4 ${i < item.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} 
+            />
+          ))}
+          <span className="ml-1 text-slate-400">({item.rating})</span>
+        </div>
+      )
+    },
+    { 
+      key: 'text', 
+      label: 'Comment',
+      render: (item: Review) => (
+        <div className="max-w-xs truncate text-slate-300">
+          {item.text}
+        </div>
+      )
+    },
+    { 
+      key: 'createdAt', 
+      label: 'Date',
+      render: (item: Review) => new Date(item.createdAt).toLocaleDateString()
+    },
+    { 
+      key: 'status', 
+      label: 'Status',
+      render: (item: Review) => (
+        <select
+          value={item.status}
+          onChange={(e) => handleStatusChange(item._id, e.target.value as 'approved' | 'rejected' | 'pending')}
+          className={`w-full max-w-[120px] rounded-full text-xs px-2 py-1 focus:outline-none ${
+            item.status === 'approved' 
+              ? 'bg-emerald-500/20 text-emerald-300' 
+              : item.status === 'pending'
+                ? 'bg-amber-500/20 text-amber-300'
+                : 'bg-red-500/20 text-red-300'
+          }`}
+        >
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      )
+    },
+  ];
+
+  const filters = [
+    {
+      field: 'status',
+      label: 'Filter by Status',
+      options: [
+        { value: '', label: 'All Status' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'approved', label: 'Approved' },
+        { value: 'rejected', label: 'Rejected' },
+      ]
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -50,104 +198,37 @@ export default function ReviewsManagement() {
       </div>
 
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search reviews..."
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-10 pr-4 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="text-slate-400">Loading reviews...</div>
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="text-slate-400 w-4 h-4" />
-            <select
-              className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700 text-left text-slate-400">
-                <th className="pb-3 font-medium">Book</th>
-                <th className="pb-3 font-medium">User</th>
-                <th className="pb-3 font-medium">Rating</th>
-                <th className="pb-3 font-medium">Comment</th>
-                <th className="pb-3 font-medium">Date</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredReviews.map((review) => (
-                <tr key={review.id} className="border-b border-slate-800 last:border-b-0 hover:bg-slate-700/30">
-                  <td className="py-4 font-medium flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-violet-500" />
-                    {review.book}
-                  </td>
-                  <td className="py-4 flex items-center gap-2">
-                    <User className="w-4 h-4 text-slate-400" />
-                    {review.user}
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star 
-                          key={i} 
-                          className={`w-4 h-4 ${i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} 
-                        />
-                      ))}
-                      <span className="ml-1 text-slate-400">({review.rating})</span>
-                    </div>
-                  </td>
-                  <td className="py-4 max-w-xs truncate text-slate-300">{review.comment}</td>
-                  <td className="py-4 text-slate-400">{review.date}</td>
-                  <td className="py-4">
-                    <select
-                      value={review.status}
-                      onChange={(e) => handleStatusChange(review.id, e.target.value as any)}
-                      className={`w-full max-w-[120px] rounded-full text-xs px-2 py-1 focus:outline-none ${
-                        review.status === 'approved' 
-                          ? 'bg-emerald-500/20 text-emerald-300' 
-                          : review.status === 'pending'
-                            ? 'bg-amber-500/20 text-amber-300'
-                            : 'bg-red-500/20 text-red-300'
-                      }`}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                  </td>
-                  <td className="py-4">
-                    <div className="flex items-center gap-2">
-                      <button className="text-slate-400 hover:text-slate-200 p-1">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        className="text-slate-400 hover:text-red-400 p-1"
-                        onClick={() => handleDelete(review.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={reviews}
+            total={totalReviews}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onSearch={handleSearch}
+            onFilter={handleFilter}
+            searchPlaceholder="Search reviews..."
+            filters={filters}
+            actions={(item) => (
+              <div className="flex items-center gap-2">
+                <button className="text-slate-400 hover:text-slate-200 p-1">
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button 
+                  className="text-slate-400 hover:text-red-400 p-1"
+                  onClick={() => handleDelete(item._id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          />
+        )}
       </div>
     </div>
   );

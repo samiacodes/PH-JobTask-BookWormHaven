@@ -116,7 +116,7 @@ export default function BrowsePage() {
             <button
               key={genre}
               onClick={() => setSelectedGenre(genre)}
-              className={`px-4 py-2 rounded-full capitalize whitespace-nowrap transition-all ${selectedGenre === genre ? 'bg-gradient-to-r from-purple-600 to-blue-500' : 'bg-white/5 hover:bg-white/10'}`}
+              className={`px-4 py-2 rounded-full capitalize whitespace-nowrap transition-all ${selectedGenre === genre ? 'bg-linear-to-r from-purple-600 to-blue-500' : 'bg-white/5 hover:bg-white/10'}`}
             >
               {genre}
             </button>
