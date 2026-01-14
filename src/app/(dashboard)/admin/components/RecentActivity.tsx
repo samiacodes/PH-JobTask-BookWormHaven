@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BookOpen, MessageSquare, Users } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 interface ActivityItem {
   id: string;
@@ -12,66 +13,50 @@ interface ActivityItem {
   icon: React.ReactNode;
 }
 
-export default function RecentActivity() {
+interface RecentActivityProps {
+  type: 'books' | 'reviews';
+  data?: any[];
+}
+
+export default function RecentActivity({ type, data }: RecentActivityProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching recent activities
-    const fetchActivities = async () => {
-      // In a real app, this would fetch from an API
-      const mockActivities: ActivityItem[] = [
-        {
-          id: '1',
-          type: 'book',
-          title: 'New book added',
-          description: "New book 'Project Hail Mary' added by Alex",
-          time: '5 minutes ago',
-          icon: <BookOpen className="w-4 h-4 text-violet-500" />
-        },
-        {
-          id: '2',
-          type: 'review',
-          title: 'New review',
-          description: "John reviewed 'Atomic Habits'",
-          time: '15 minutes ago',
-          icon: <MessageSquare className="w-4 h-4 text-amber-500" />
-        },
-        {
-          id: '3',
-          type: 'user',
-          title: 'New user registered',
-          description: "New user Sarah joined",
-          time: '20 minutes ago',
-          icon: <Users className="w-4 h-4 text-emerald-500" />
-        },
-        {
-          id: '4',
-          type: 'book',
-          title: 'New book added',
-          description: "New book 'The Midnight Library' added by Sarah",
-          time: '20 minutes ago',
-          icon: <BookOpen className="w-4 h-4 text-violet-500" />
-        },
-        {
-          id: '5',
-          type: 'review',
-          title: 'Review approved',
-          description: "Admin approved review for 'The Silent Patient'",
-          time: '45 minutes ago',
-          icon: <MessageSquare className="w-4 h-4 text-amber-500" />
+    if (data && data.length > 0) {
+      const formattedActivities = data.map((item: any, index: number) => {
+        let activity: ActivityItem;
+        
+        if (type === 'books') {
+          activity = {
+            id: item._id || `book-${index}`,
+            type: 'book',
+            title: 'New book added',
+            description: `New book '${item.title}' added by ${item.author}`,
+            time: formatDistanceToNow(new Date(item.createdAt), { addSuffix: true }),
+            icon: <BookOpen className="w-4 h-4 text-violet-500" />
+          };
+        } else { // reviews
+          activity = {
+            id: item._id || `review-${index}`,
+            type: 'review',
+            title: 'New review',
+            description: `${item.user?.name} reviewed '${item.book?.title}'`,
+            time: formatDistanceToNow(new Date(item.createdAt), { addSuffix: true }),
+            icon: <MessageSquare className="w-4 h-4 text-amber-500" />
+          };
         }
-      ];
-
-      // Simulate API delay
-      setTimeout(() => {
-        setActivities(mockActivities);
-        setLoading(false);
-      }, 500);
-    };
-
-    fetchActivities();
-  }, []);
+        
+        return activity;
+      });
+      
+      setActivities(formattedActivities);
+      setLoading(false);
+    } else {
+      // Fallback to loading state
+      setLoading(false);
+    }
+  }, [data, type]);
 
   if (loading) {
     return (
@@ -87,6 +72,14 @@ export default function RecentActivity() {
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <div className="text-center text-slate-400 py-4">
+        No recent {type}
       </div>
     );
   }

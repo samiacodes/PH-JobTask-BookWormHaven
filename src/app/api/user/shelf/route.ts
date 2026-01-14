@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDb from '@/lib/db';
+// Import models to ensure they are registered
 import User from '@/model/user.model';
 import Book from '@/model/book.model';
+import '@/model/review.model';
+import '@/model/genre.model';
 import authOptions from '@/lib/auth';
 
 export async function POST(request: NextRequest) {

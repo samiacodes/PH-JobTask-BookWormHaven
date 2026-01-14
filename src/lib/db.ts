@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
 
+// Import models to ensure they are registered before connecting
+import '@/model/user.model';
+import '@/model/book.model';
+import '@/model/review.model';
+import '@/model/genre.model';
+
 const MONGODB_URI: string = (process.env.MONGODB_URI || process.env.MONGODB_URL || 'mongodb://localhost:27017/bookworm') as string;
 
 if (MONGODB_URI.includes('your_mongodb_connection_string')) {

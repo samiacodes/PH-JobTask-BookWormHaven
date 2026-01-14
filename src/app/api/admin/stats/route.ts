@@ -4,6 +4,7 @@ import connectDb from '@/lib/db';
 import Book from '@/model/book.model';
 import User from '@/model/user.model';
 import Review from '@/model/review.model';
+import Genre from '@/model/genre.model';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,9 @@ export async function GET(request: NextRequest) {
       totalBooks,
       pendingReviews,
       totalUsers,
-      booksAddedToday
+      booksAddedToday,
+      recentBooks,
+      recentReviews
     ] = await Promise.all([
       Book.countDocuments(),
       Review.countDocuments({ status: 'pending' }),
@@ -39,14 +42,27 @@ export async function GET(request: NextRequest) {
           $gte: startOfDay,
           $lt: endOfDay
         }
-      })
+      }),
+      Book.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('genre', 'name')
+        .select('title author coverImage createdAt'),
+      Review.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('book', 'title')
+        .populate('user', 'name')
+        .select('text rating status createdAt')
     ]);
 
     return NextResponse.json({
       totalBooks,
       pendingReviews,
       totalUsers,
-      booksAddedToday
+      booksAddedToday,
+      recentBooks,
+      recentReviews
     });
   } catch (error) {
     console.error('Error fetching admin stats:', error);

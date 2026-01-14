@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDb from '@/lib/db';
+// Import models to ensure they are registered
 import User from '@/model/user.model';
 import Book from '@/model/book.model';
 import authOptions from '@/lib/auth';
+
+// Ensure models are registered by accessing them
+const userModel = User;
+const bookModel = Book;
 
 export async function GET(request: NextRequest) {
   try {

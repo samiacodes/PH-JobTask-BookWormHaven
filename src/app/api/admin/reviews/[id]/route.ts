@@ -1,126 +1,240 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDb from '@/lib/db';
 import Review from '@/model/review.model';
-import Book from '@/model/book.model';
-import { getToken } from 'next-auth/jwt';
 
-// Handle PUT request to update review status
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// GET single review
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
     await connectDb();
 
-    // Get token to check if user is admin
-    const token = await getToken({ req: request });
-    if (!token || token.role !== 'admin') {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const review = await Review.findById(params.id)
+      .populate({
+        path: 'book',
+        select: 'title author coverImage'
+      })
+      .populate({
+        path: 'user',
+        select: 'name email'
+      })
+      .lean();
 
-    const body = await request.json();
-    const { status } = body;
-
-    // Validate status
-    if (!['approved', 'rejected'].includes(status)) {
-      return NextResponse.json(
-        { message: 'Invalid status. Must be "approved" or "rejected"' },
-        { status: 400 }
-      );
-    }
-
-    // Find the review
-    const review = await Review.findById(id);
     if (!review) {
       return NextResponse.json(
-        { message: 'Review not found' },
+        { 
+          success: false,
+          error: 'Review not found' 
+        }, 
         { status: 404 }
       );
     }
 
-    // Update the review status
-    review.status = status;
-    await review.save();
+    return NextResponse.json({
+      success: true,
+      review
+    });
 
-    // If the review is approved, update the book's average rating
-    if (status === 'approved') {
-      // Recalculate the book's average rating and total reviews
-      const book = await Book.findById(review.book);
-      if (book) {
-        // Get all approved reviews for this book
-        const approvedReviews = await Review.find({
-          book: book._id,
-          status: 'approved'
-        });
-
-        // Calculate new average rating
-        const totalRating = approvedReviews.reduce((sum, r) => sum + r.rating, 0);
-        book.averageRating = totalRating / approvedReviews.length || 0;
-        book.totalReviews = approvedReviews.length;
-
-        await book.save();
-      }
-    }
-
-    return NextResponse.json(review);
-  } catch (error) {
-    console.error('Error updating review status:', error);
+  } catch (error: any) {
+    console.error('Error fetching review:', error);
     return NextResponse.json(
-      { message: 'Failed to update review status' },
+      { 
+        success: false,
+        error: 'Failed to fetch review', 
+        details: error.message 
+      }, 
       { status: 500 }
     );
   }
 }
 
-// Handle DELETE request to remove a review
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// PATCH - Update review status
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params;
     await connectDb();
 
-    // Get token to check if user is admin
-    const token = await getToken({ req: request });
-    if (!token || token.role !== 'admin') {
+    const { status } = await request.json();
+
+    if (!status || !['pending', 'approved', 'rejected'].includes(status)) {
       return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
+        { 
+          success: false,
+          error: 'Invalid status value. Must be pending, approved, or rejected' 
+        }, 
+        { status: 400 }
       );
     }
 
-    const review = await Review.findByIdAndDelete(id);
+    const review = await Review.findByIdAndUpdate(
+      params.id,
+      { status },
+      { new: true }
+    )
+      .populate({
+        path: 'book',
+        select: 'title author coverImage'
+      })
+      .populate({
+        path: 'user',
+        select: 'name email'
+      })
+      .lean();
 
     if (!review) {
       return NextResponse.json(
-        { message: 'Review not found' },
+        { 
+          success: false,
+          error: 'Review not found' 
+        }, 
         { status: 404 }
       );
     }
 
-    // If the deleted review was approved, recalculate the book's average rating
-    if (review.status === 'approved') {
-      const book = await Book.findById(review.book);
-      if (book) {
-        // Get all approved reviews for this book
-        const approvedReviews = await Review.find({
-          book: book._id,
-          status: 'approved'
-        });
+    return NextResponse.json({
+      success: true,
+      message: `Review ${status} successfully`,
+      review
+    });
 
-        // Calculate new average rating
-        const totalRating = approvedReviews.reduce((sum, r) => sum + r.rating, 0);
-        book.averageRating = totalRating / approvedReviews.length || 0;
-        book.totalReviews = approvedReviews.length;
+  } catch (error: any) {
+    console.error('Error updating review status:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Failed to update review status', 
+        details: error.message 
+      }, 
+      { status: 500 }
+    );
+  }
+}
 
-        await book.save();
-      }
+// PUT - Update full review
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await connectDb();
+
+    const { text, rating, status } = await request.json();
+
+    // Validation
+    if (!text?.trim()) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Review text is required' 
+        }, 
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ message: 'Review deleted successfully' });
-  } catch (error) {
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Rating must be a number between 1 and 5' 
+        }, 
+        { status: 400 }
+      );
+    }
+
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Invalid status value' 
+        }, 
+        { status: 400 }
+      );
+    }
+
+    const review = await Review.findByIdAndUpdate(
+      params.id,
+      { 
+        text: text.trim(),
+        rating: Math.round(rating), // Ensure integer rating
+        status 
+      },
+      { new: true }
+    )
+      .populate({
+        path: 'book',
+        select: 'title author coverImage'
+      })
+      .populate({
+        path: 'user',
+        select: 'name email'
+      })
+      .lean();
+
+    if (!review) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Review not found' 
+        }, 
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Review updated successfully',
+      review
+    });
+
+  } catch (error: any) {
+    console.error('Error updating review:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Failed to update review', 
+        details: error.message 
+      }, 
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Remove review
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await connectDb();
+
+    const review = await Review.findByIdAndDelete(params.id);
+
+    if (!review) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Review not found' 
+        }, 
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Review deleted successfully'
+    });
+
+  } catch (error: any) {
     console.error('Error deleting review:', error);
     return NextResponse.json(
-      { message: 'Failed to delete review' },
+      { 
+        success: false,
+        error: 'Failed to delete review', 
+        details: error.message 
+      }, 
       { status: 500 }
     );
   }

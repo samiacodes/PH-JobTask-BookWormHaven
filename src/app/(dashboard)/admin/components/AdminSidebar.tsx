@@ -10,7 +10,8 @@ import {
   MessageSquare, 
   Video, 
   Settings,
-  User
+  User,
+  X
 } from 'lucide-react';
 
 const navItems = [
@@ -23,13 +24,29 @@ const navItems = [
   { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  onClose?: () => void;
+  isOpen?: boolean;
+}
+
+export default function AdminSidebar({ onClose, isOpen }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b border-slate-700">
-        <h1 className="text-xl font-bold text-violet-500">BookWorm Admin</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold text-violet-500">BookWorm Admin</h1>
+          {/* Close button for mobile */}
+          {onClose && (
+            <button 
+              className="md:hidden text-slate-300 hover:text-slate-50"
+              onClick={onClose}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
       
       <nav className="flex-1 p-4">
@@ -47,6 +64,11 @@ export default function AdminSidebar() {
                       ? 'bg-violet-500/20 text-violet-500 border border-violet-500/30' 
                       : 'hover:bg-slate-700/50'
                   }`}
+                  onClick={() => {
+                    if (onClose) {
+                      onClose();
+                    }
+                  }}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.label}</span>

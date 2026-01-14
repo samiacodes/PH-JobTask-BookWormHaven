@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import connectDb from '@/lib/db';
+// Import models to ensure they are registered
 import Review from '@/model/review.model';
 import Book from '@/model/book.model';
+import '@/model/user.model';
+import '@/model/genre.model';
 import { Types } from 'mongoose';
 
 export async function POST(request: NextRequest) {

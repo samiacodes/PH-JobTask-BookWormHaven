@@ -34,7 +34,7 @@ export default function DashboardCharts({
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Books per Genre (Pie Chart) */}
       <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
         <h3 className="text-lg font-semibold mb-4">Books per Genre</h3>
@@ -107,7 +107,7 @@ export default function DashboardCharts({
       </div>
 
       {/* User Growth (Area Chart) */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 lg:col-span-2">
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 md:col-span-2">
         <h3 className="text-lg font-semibold mb-4">User Growth</h3>
         <div className="h-64 flex items-end justify-between pt-8 pb-4">
           {userGrowth.map((item, index) => {
