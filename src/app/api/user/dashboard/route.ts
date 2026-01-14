@@ -44,12 +44,12 @@ export async function GET(request: NextRequest) {
     const booksToRead = shelves.wantToRead || [];
     
     // Calculate pages read from books in 'read' shelf (assuming books have pages property)
-    const pagesRead = booksRead.reduce((total, book: any) => total + (book.pages || 0), 0);
+    const pagesRead = booksRead.reduce((total: number, book: any) => total + (book.pages || 0), 0 as number);
     
     // Calculate average rating from user's reviews
     let avgRating = 0;
     if (booksRead.length > 0) {
-      const totalRatings = booksRead.reduce((sum, book: any) => sum + (book.averageRating || 0), 0);
+      const totalRatings = booksRead.reduce((sum: number, book: any) => sum + (book.averageRating || 0), 0 as number);
       avgRating = booksRead.length > 0 ? totalRatings / booksRead.length : 0;
     }
     
