@@ -5,12 +5,14 @@ import Review from '@/model/review.model';
 import Book from '@/model/book.model';
 import { Types } from 'mongoose';
 
+
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }  
 ) {
   try {
-    const { id } = await params;
+  
+    const { id } = await context.params;
     
     // Verify admin authentication
     const token = await getToken({ req: request });
@@ -91,14 +93,16 @@ export async function PUT(
   }
 }
 
+
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }  
 ) {
   try {
-    const { id } = await params;
     
-    // Verify admin authentication
+    const { id } = await context.params;
+    
+
     const token = await getToken({ req: request });
     if (!token || token.role !== 'admin') {
       return NextResponse.json(
@@ -149,6 +153,57 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting review:', error);
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    
+    // Verify admin authentication
+    const token = await getToken({ req: request });
+    if (!token || token.role !== 'admin') {
+      return NextResponse.json(
+        { message: 'Unauthorized: Admin access required' },
+        { status: 401 }
+      );
+    }
+
+    // Validate review ID
+    if (!id || !Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { message: 'Invalid review ID' },
+        { status: 400 }
+      );
+    }
+
+    await connectDb();
+
+    // Find review by ID
+    const review = await Review.findById(id)
+      .populate('book', 'title author')
+      .populate('user', 'name email');
+
+    if (!review) {
+      return NextResponse.json(
+        { message: 'Review not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      review
+    });
+  } catch (error) {
+    console.error('Error fetching review:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }
