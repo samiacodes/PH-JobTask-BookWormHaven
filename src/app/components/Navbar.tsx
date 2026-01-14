@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, Search, User, LogOut, LogIn, BookOpen, Home, Library, Sparkles } from 'lucide-react';
+import { Menu, X, Search, User, LogOut, LogIn, BookOpen, Home, Library, Sparkles, Video } from 'lucide-react';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -63,6 +63,13 @@ export default function Navbar() {
             >
               <Sparkles className="w-4 h-4" />
               For You
+            </Link>
+            <Link 
+              href="/tutorials" 
+              className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
+            >
+              <Video className="w-4 h-4" />
+              Tutorials
             </Link>
 
             {/* Search Bar */}
@@ -202,6 +209,22 @@ export default function Navbar() {
               >
                 <Library className="w-4 h-4" />
                 Library
+              </Link>
+              <Link 
+                href="/recommendations" 
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Sparkles className="w-4 h-4" />
+                For You
+              </Link>
+              <Link 
+                href="/tutorials" 
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Video className="w-4 h-4" />
+                Tutorials
               </Link>
               {session?.user?.role === 'admin' && (
                 <Link 

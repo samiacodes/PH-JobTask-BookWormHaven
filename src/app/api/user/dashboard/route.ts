@@ -38,11 +38,54 @@ export async function GET(request: NextRequest) {
       read: []
     };
 
+    // Calculate more detailed stats
+    const booksRead = shelves.read || [];
+    const booksReading = shelves.currentlyReading || [];
+    const booksToRead = shelves.wantToRead || [];
+    
+    // Calculate pages read from books in 'read' shelf (assuming books have pages property)
+    const pagesRead = booksRead.reduce((total, book: any) => total + (book.pages || 0), 0);
+    
+    // Calculate average rating from user's reviews
+    let avgRating = 0;
+    if (booksRead.length > 0) {
+      const totalRatings = booksRead.reduce((sum, book: any) => sum + (book.averageRating || 0), 0);
+      avgRating = booksRead.length > 0 ? totalRatings / booksRead.length : 0;
+    }
+    
+    // Calculate books read this year
+    const currentYear = new Date().getFullYear();
+    const booksThisYear = booksRead.filter((book: any) => {
+      const bookDate = new Date(book.createdAt || book.updatedAt || Date.now());
+      return bookDate.getFullYear() === currentYear;
+    }).length;
+    
+    // Calculate favorite genre
+    const genreCounts: Record<string, number> = {};
+    booksRead.forEach((book: any) => {
+      if (book.genre && Array.isArray(book.genre)) {
+        book.genre.forEach((genre: string) => {
+          genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+        });
+      }
+    });
+    
+    const favoriteGenre = Object.keys(genreCounts).length > 0 
+      ? Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b)
+      : 'N/A';
+    
+    // Simple reading streak calculation (placeholder)
+    const readingStreak = Math.min(Math.floor(booksThisYear / 2), 30); // Just a simple calculation
+    
     const stats = {
-      booksRead: shelves.read.length,
-      booksReading: shelves.currentlyReading.length,
-      booksToRead: shelves.wantToRead.length,
-      avgRating: 0 // We'll calculate this later if needed
+      booksRead: booksRead.length,
+      booksReading: booksReading.length,
+      booksToRead: booksToRead.length,
+      avgRating: parseFloat(avgRating.toFixed(2)),
+      pagesRead,
+      readingStreak,
+      favoriteGenre,
+      booksThisYear
     };
 
     // Get recent books (most recently added to shelves)

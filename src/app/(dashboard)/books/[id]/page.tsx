@@ -28,6 +28,16 @@ interface Book {
   createdAt: string;
 }
 
+interface Review {
+  _id: string;
+  user: {
+    name: string;
+  };
+  rating: number;
+  text: string;
+  createdAt: string;
+}
+
 export default function BookDetailsPage() {
   const { id } = useParams();
   const { data: session } = useSession();
@@ -35,6 +45,10 @@ export default function BookDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [libraryStatus, setLibraryStatus] = useState<'wantToRead' | 'currentlyReading' | 'read' | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     const fetchBook = async () => {
@@ -78,6 +92,7 @@ export default function BookDetailsPage() {
 
     if (id) {
       fetchBook();
+      fetchReviews();
     }
   }, [id, session]);
 
@@ -142,6 +157,67 @@ export default function BookDetailsPage() {
     } catch (error) {
       console.error('Error updating shelf:', error);
       alert('An error occurred while updating your library');
+    }
+  };
+  
+  const fetchReviews = async () => {
+    if (!id) return;
+    
+    try {
+      const response = await fetch(`/api/reviews?bookId=${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data.reviews);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    }
+  };
+  
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!book || reviewRating === 0 || !reviewText.trim()) {
+      alert('Please provide a rating and review text');
+      return;
+    }
+    
+    if (!session) {
+      alert('Please log in to submit a review');
+      return;
+    }
+    
+    setIsSubmittingReview(true);
+    
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bookId: book._id,
+          rating: reviewRating,
+          text: reviewText
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert('Review submitted successfully! It is pending admin approval.');
+        setReviewRating(0);
+        setReviewText('');
+        // Refetch reviews to update the list
+        fetchReviews();
+      } else {
+        alert(result.message || 'Failed to submit review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('An error occurred while submitting your review');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -362,8 +438,93 @@ export default function BookDetailsPage() {
         {/* Reviews Section */}
         <div className="mt-12">
           <GlassCard>
-            <h2 className="text-2xl font-bold mb-6">Reviews</h2>
-            <p className="text-gray-400">Reviews will appear here once added by users.</p>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Reviews</h2>
+              {session && (
+                <button 
+                  onClick={() => document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                >
+                  Write a Review
+                </button>
+              )}
+            </div>
+            
+            {/* Reviews List */}
+            <div className="space-y-6" id="reviews-list">
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review._id} className="p-4 border border-white/10 rounded-lg">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-semibold">{review.user.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          {renderStars(review.rating)}
+                          <span className="text-sm text-gray-400 ml-2">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-gray-300 mt-2">{review.text}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400">No reviews yet. Be the first to review this book!</p>
+              )}
+            </div>
+            
+            {/* Review Form - Only visible if user is logged in */}
+            {session && (
+              <div className="mt-8" id="review-form">
+                <h3 className="text-xl font-bold mb-4">Submit Your Review</h3>
+                <form onSubmit={handleSubmitReview} className="space-y-4">
+                  <div>
+                    <label className="block text-gray-300 mb-2">Rating</label>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className="text-2xl focus:outline-none"
+                        >
+                          <Star 
+                            className={`${star <= reviewRating ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} 
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-400 mt-1">Click on stars to rate this book</p>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="reviewText" className="block text-gray-300 mb-2">Your Review</label>
+                    <textarea
+                      id="reviewText"
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      rows={4}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-purple-500 resize-none"
+                      placeholder="Share your thoughts about this book..."
+                      required
+                    />
+                  </div>
+                  
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReview}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-500 hover:opacity-90 rounded-lg font-medium transition-opacity disabled:opacity-50"
+                  >
+                    {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </form>
+              </div>
+            )}
+            
+            {!session && (
+              <p className="text-gray-400 mt-4">Please <a href="/login" className="text-purple-400 hover:underline">log in</a> to submit a review.</p>
+            )}
           </GlassCard>
         </div>
       </div>

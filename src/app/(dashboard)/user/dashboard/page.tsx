@@ -22,7 +22,11 @@ export default function UserDashboardPage() {
       booksRead: 0,
       booksReading: 0,
       booksToRead: 0,
-      avgRating: 0
+      avgRating: 0,
+      pagesRead: 0,
+      readingStreak: 0,
+      favoriteGenre: '',
+      booksThisYear: 0
     },
     recentBooks: [] as Book[],
     recommendations: [] as Book[]
@@ -67,7 +71,11 @@ export default function UserDashboardPage() {
           booksRead: 0,
           booksReading: 0,
           booksToRead: 0,
-          avgRating: 0
+          avgRating: 0,
+          pagesRead: 0,
+          readingStreak: 0,
+          favoriteGenre: '',
+          booksThisYear: 0
         },
         recentBooks: [],
         recommendations: []
@@ -120,9 +128,9 @@ export default function UserDashboardPage() {
                 <div className="p-2 rounded-lg bg-blue-600/20">
                   <Eye className="w-5 h-5 text-blue-400" />
                 </div>
-                <div className="text-2xl font-bold">{dashboardData.stats.booksReading}</div>
+                <div className="text-2xl font-bold">{dashboardData.stats.pagesRead}</div>
               </div>
-              <div className="text-sm text-gray-400">Reading</div>
+              <div className="text-sm text-gray-400">Pages Read</div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -130,9 +138,9 @@ export default function UserDashboardPage() {
                 <div className="p-2 rounded-lg bg-amber-600/20">
                   <Bookmark className="w-5 h-5 text-amber-400" />
                 </div>
-                <div className="text-2xl font-bold">{dashboardData.stats.booksToRead}</div>
+                <div className="text-2xl font-bold">{dashboardData.stats.readingStreak}</div>
               </div>
-              <div className="text-sm text-gray-400">To Read</div>
+              <div className="text-sm text-gray-400">Day Streak</div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -143,6 +151,29 @@ export default function UserDashboardPage() {
                 <div className="text-2xl font-bold">{(dashboardData.stats.avgRating || 0).toFixed(1)}</div>
               </div>
               <div className="text-sm text-gray-400">Avg Rating</div>
+            </div>
+          </div>
+          
+          {/* Additional Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-indigo-600/20">
+                  <BookOpen className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="text-2xl font-bold">{dashboardData.stats.booksThisYear}</div>
+              </div>
+              <div className="text-sm text-gray-400">This Year</div>
+            </div>
+            
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-pink-600/20">
+                  <TrendingUp className="w-5 h-5 text-pink-400" />
+                </div>
+                <div className="text-2xl font-bold">{dashboardData.stats.favoriteGenre || 'N/A'}</div>
+              </div>
+              <div className="text-sm text-gray-400">Favorite Genre</div>
             </div>
           </div>
 
