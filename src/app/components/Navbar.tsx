@@ -226,6 +226,14 @@ export default function Navbar() {
                 <Video className="w-4 h-4" />
                 Tutorials
               </Link>
+              <Link 
+                href="/profile" 
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <User className="w-4 h-4" />
+                Profile
+              </Link>
               {session?.user?.role === 'admin' && (
                 <Link 
                   href="/add-book" 
