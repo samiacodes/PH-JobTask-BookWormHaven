@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDb from '@/lib/db';
-import Review from '@/model/review.model';
+import Review from '@/model/review.model'; 
 
-// GET single review
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
